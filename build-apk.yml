@@ -1,0 +1,1510 @@
+name: Build Android APK
+
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Java 17 setup
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: '17'
+
+      - name: Android SDK licence accept
+        run: |
+          echo "ANDROID_HOME=$ANDROID_HOME"
+          yes | "$ANDROID_HOME/cmdline-tools/latest/bin/sdkmanager" --licenses > /dev/null || true
+
+      - name: Gradle 8.7 setup
+        uses: gradle/actions/setup-gradle@v4
+        with:
+          gradle-version: '8.7'
+
+      - name: Project files banao
+        run: |
+          set -e
+          mkdir -p proj && cd proj
+          cat > settings.gradle <<'LNEOF0'
+          pluginManagement {
+              repositories {
+                  google()
+                  mavenCentral()
+                  gradlePluginPortal()
+              }
+          }
+          dependencyResolutionManagement {
+              repositoriesMode.set(RepositoriesMode.FAIL_ON_PROJECT_REPOS)
+              repositories {
+                  google()
+                  mavenCentral()
+              }
+          }
+          rootProject.name = "LatestNewsIndStock"
+          include ':app'
+          LNEOF0
+          cat > build.gradle <<'LNEOF1'
+          plugins {
+              id 'com.android.application' version '8.5.2' apply false
+          }
+          LNEOF1
+          cat > gradle.properties <<'LNEOF2'
+          org.gradle.jvmargs=-Xmx2048m -Dfile.encoding=UTF-8
+          android.useAndroidX=false
+          android.nonTransitiveRClass=true
+          LNEOF2
+          mkdir -p app
+          cat > app/build.gradle <<'LNEOF3'
+          plugins {
+              id 'com.android.application'
+          }
+
+          android {
+              namespace 'com.dkj.latestnews'
+              compileSdk 34
+
+              defaultConfig {
+                  applicationId "com.dkj.latestnews"
+                  minSdk 26
+                  targetSdk 34
+                  versionCode 2
+                  versionName "1.1"
+              }
+
+              signingConfigs {
+                  release {
+                      storeFile file('release.jks')
+                      storePassword 'latestnews123'
+                      keyAlias 'latestnews'
+                      keyPassword 'latestnews123'
+                  }
+              }
+
+              buildTypes {
+                  release {
+                      minifyEnabled false
+                      signingConfig signingConfigs.release
+                  }
+              }
+
+              lint {
+                  abortOnError false
+                  checkReleaseBuilds false
+              }
+
+              compileOptions {
+                  sourceCompatibility JavaVersion.VERSION_17
+                  targetCompatibility JavaVersion.VERSION_17
+              }
+          }
+          LNEOF3
+          mkdir -p app/src/main
+          cat > app/src/main/AndroidManifest.xml <<'LNEOF4'
+          <?xml version="1.0" encoding="utf-8"?>
+          <manifest xmlns:android="http://schemas.android.com/apk/res/android">
+
+              <uses-permission android:name="android.permission.INTERNET" />
+              <uses-permission
+                  android:name="android.permission.WRITE_EXTERNAL_STORAGE"
+                  android:maxSdkVersion="28" />
+
+              <application
+                  android:allowBackup="false"
+                  android:icon="@mipmap/ic_launcher"
+                  android:roundIcon="@mipmap/ic_launcher_round"
+                  android:label="Latest Stock News"
+                  android:theme="@android:style/Theme.Material.NoActionBar"
+                  android:usesCleartextTraffic="false">
+
+                  <activity
+                      android:name=".MainActivity"
+                      android:configChanges="orientation|screenSize|keyboardHidden"
+                      android:exported="true"
+                      android:windowSoftInputMode="adjustResize">
+                      <intent-filter>
+                          <action android:name="android.intent.action.MAIN" />
+                          <category android:name="android.intent.category.LAUNCHER" />
+                      </intent-filter>
+                  </activity>
+              </application>
+          </manifest>
+          LNEOF4
+          mkdir -p app/src/main/res/values
+          cat > app/src/main/res/values/colors.xml <<'LNEOF5'
+          <?xml version="1.0" encoding="utf-8"?>
+          <resources>
+              <color name="ic_background">#0F172A</color>
+          </resources>
+          LNEOF5
+          mkdir -p app/src/main/res/drawable
+          cat > app/src/main/res/drawable/ic_foreground.xml <<'LNEOF6'
+          <?xml version="1.0" encoding="utf-8"?>
+          <vector xmlns:android="http://schemas.android.com/apk/res/android"
+              android:width="108dp"
+              android:height="108dp"
+              android:viewportWidth="108"
+              android:viewportHeight="108">
+              <path android:fillColor="#1E3A8A" android:pathData="M30,60h9v18h-9z" />
+              <path android:fillColor="#0EA5E9" android:pathData="M45,52h9v26h-9z" />
+              <path android:fillColor="#38BDF8" android:pathData="M60,44h9v34h-9z" />
+              <path
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="3"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M28,52L45,40L55,46L78,28" />
+              <path
+                  android:strokeColor="#FFFFFF"
+                  android:strokeWidth="3"
+                  android:strokeLineCap="round"
+                  android:strokeLineJoin="round"
+                  android:pathData="M69,28L78,28L78,37" />
+          </vector>
+          LNEOF6
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher.xml <<'LNEOF7'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_background" />
+              <foreground android:drawable="@drawable/ic_foreground" />
+          </adaptive-icon>
+          LNEOF7
+          mkdir -p app/src/main/res/mipmap-anydpi-v26
+          cat > app/src/main/res/mipmap-anydpi-v26/ic_launcher_round.xml <<'LNEOF8'
+          <?xml version="1.0" encoding="utf-8"?>
+          <adaptive-icon xmlns:android="http://schemas.android.com/apk/res/android">
+              <background android:drawable="@color/ic_background" />
+              <foreground android:drawable="@drawable/ic_foreground" />
+          </adaptive-icon>
+          LNEOF8
+          mkdir -p app/src/main/java/com/dkj/latestnews
+          cat > app/src/main/java/com/dkj/latestnews/NewsEngine.java <<'LNEOF9'
+          package com.dkj.latestnews;
+
+          import org.json.JSONArray;
+          import org.json.JSONObject;
+          import org.w3c.dom.Document;
+          import org.w3c.dom.Element;
+          import org.w3c.dom.NodeList;
+
+          import java.io.ByteArrayInputStream;
+          import java.io.ByteArrayOutputStream;
+          import java.io.InputStream;
+          import java.io.OutputStream;
+          import java.net.HttpURLConnection;
+          import java.net.URL;
+          import java.net.URLEncoder;
+          import java.nio.charset.StandardCharsets;
+          import java.time.Instant;
+          import java.time.LocalDate;
+          import java.time.LocalDateTime;
+          import java.time.OffsetDateTime;
+          import java.time.ZoneId;
+          import java.time.ZoneOffset;
+          import java.time.ZonedDateTime;
+          import java.time.format.DateTimeFormatter;
+          import java.util.ArrayList;
+          import java.util.Arrays;
+          import java.util.Base64;
+          import java.util.Collections;
+          import java.util.HashSet;
+          import java.util.LinkedHashMap;
+          import java.util.List;
+          import java.util.Locale;
+          import java.util.Map;
+          import java.util.Set;
+          import java.util.concurrent.Callable;
+          import java.util.concurrent.ExecutorService;
+          import java.util.concurrent.Executors;
+          import java.util.concurrent.Future;
+          import java.util.regex.Matcher;
+          import java.util.regex.Pattern;
+
+          import javax.xml.parsers.DocumentBuilderFactory;
+
+          /**
+           * LATEST NEWS - INDIAN STOCKS (Android/Java version)
+           * Python program ka pura logic yahan Java me hai.
+           * Is file me Android ki koi class nahi hai (sirf org.json jo Android me pehle se hota hai).
+           */
+          public class NewsEngine {
+
+              // ------------------------- SETTINGS -------------------------
+              public static final int MAX_DAYS = 3;          // isse purani khabar nahi dikhegi (din)
+              static final int MAX_PER_COMPANY = 40;         // ek company ki max khabrein
+              static final int TIMEOUT_MS = 15000;
+
+              static final String[] JUNK_PHRASES = {
+                      "share price", "stock price", "nse/bse live", "live bse/nse",
+                      "profit and loss", "index composition", "stocks to watch", "stocks in focus",
+                      "stocks to buy", "top gainers", "top losers", "buy, sell or hold",
+                      "stock picks", "stocks today", "sector stocks", "bank holiday",
+                      "market live", "sensex today", "nifty today", "weekly recap",
+                      "seasonal returns", "returns chart", "historical data", "annual report", "mtf research"
+              };
+              static final Set<String> CORP_WORDS = new HashSet<>(Arrays.asList(
+                      "ltd", "limited", "pvt", "private", "inc", "corp", "corporation", "co", "the"));
+
+              static final String[][] SITES = {
+                      {"Moneycontrol", "moneycontrol.com"},
+                      {"Economic Times", "economictimes.indiatimes.com"},
+                      {"Business Standard", "business-standard.com"},
+                      {"Mint", "livemint.com"},
+                      {"Hindu BusinessLine", "thehindubusinessline.com"},
+                      {"NDTV Profit", "ndtvprofit.com"},
+                      {"Financial Express", "financialexpress.com"},
+                      {"Business Today", "businesstoday.in"}
+              };
+
+              static final String UA = "Mozilla/5.0 (Linux; Android 13; Mobile) LatestStockNews/1.1";
+              static final ZoneId IST = ZoneId.of("Asia/Kolkata");
+              // ------------------------------------------------------------
+
+              // ---------------------------- MODELS ----------------------------
+              public static class Company {
+                  public String name = "";
+                  public String code = "";
+                  public String alias = "";                       // comma separated short names
+                  public List<String> excl = new ArrayList<>();   // words to exclude
+              }
+
+              public static class Article {
+                  public String title, link, source;
+                  public long ts;                                 // epoch millis
+              }
+
+              public static class Match {
+                  public String name = "", shortName = "", nse = null, bse = null;
+
+                  public String codes() {
+                      StringBuilder sb = new StringBuilder();
+                      if (nse != null) sb.append("NSE: ").append(nse);
+                      if (bse != null) {
+                          if (sb.length() > 0) sb.append("  |  ");
+                          sb.append("BSE: ").append(bse);
+                      }
+                      return sb.toString();
+                  }
+
+                  public String bestCode() {
+                      return nse != null ? nse : bse;
+                  }
+              }
+
+              public static class CompanyNews {
+                  public Company company;
+                  public List<Article> news = new ArrayList<>();
+              }
+
+              interface Progress {
+                  void say(String msg);
+              }
+
+              // ---------------------------- HTTP ----------------------------
+              static byte[] httpBytes(String url, byte[] post, String contentType, int timeoutMs, int limit)
+                      throws Exception {
+                  HttpURLConnection c = (HttpURLConnection) new URL(url).openConnection();
+                  c.setConnectTimeout(timeoutMs);
+                  c.setReadTimeout(timeoutMs);
+                  c.setInstanceFollowRedirects(true);
+                  c.setRequestProperty("User-Agent", UA);
+                  if (post != null) {
+                      c.setRequestMethod("POST");
+                      c.setDoOutput(true);
+                      if (contentType != null) c.setRequestProperty("Content-Type", contentType);
+                      try (OutputStream os = c.getOutputStream()) {
+                          os.write(post);
+                      }
+                  }
+                  try (InputStream in = c.getInputStream()) {
+                      ByteArrayOutputStream bo = new ByteArrayOutputStream();
+                      byte[] buf = new byte[8192];
+                      int n;
+                      while ((n = in.read(buf)) > 0) {
+                          bo.write(buf, 0, n);
+                          if (bo.size() >= limit) break;
+                      }
+                      return bo.toByteArray();
+                  } finally {
+                      c.disconnect();
+                  }
+              }
+
+              static byte[] fetch(String url) throws Exception {
+                  return httpBytes(url, null, null, TIMEOUT_MS, 5_000_000);
+              }
+
+              static String httpText(String url) throws Exception {
+                  return new String(httpBytes(url, null, null, 10000, 400000), StandardCharsets.UTF_8);
+              }
+
+              static String enc(String s) {
+                  try {
+                      return URLEncoder.encode(s, "UTF-8");
+                  } catch (Exception e) {
+                      return s;
+                  }
+              }
+
+              // ---------------------------- RSS ----------------------------
+              static String childText(Element parent, String tag) {
+                  NodeList nl = parent.getElementsByTagName(tag);
+                  if (nl.getLength() == 0) return null;
+                  String t = nl.item(0).getTextContent();
+                  return t == null ? null : t.trim();
+              }
+
+              static List<Article> parseRss(byte[] data, String defaultSource) {
+                  List<Article> items = new ArrayList<>();
+                  try {
+                      DocumentBuilderFactory f = DocumentBuilderFactory.newInstance();
+                      Document doc = f.newDocumentBuilder().parse(new ByteArrayInputStream(data));
+                      NodeList nl = doc.getElementsByTagName("item");
+                      for (int i = 0; i < nl.getLength(); i++) {
+                          Element it = (Element) nl.item(i);
+                          String title = childText(it, "title");
+                          String link = childText(it, "link");
+                          String pub = childText(it, "pubDate");
+                          String src = childText(it, "source");
+                          if (src == null || src.isEmpty()) src = defaultSource;
+                          long ts;
+                          try {
+                              ts = ZonedDateTime.parse(pub, DateTimeFormatter.RFC_1123_DATE_TIME)
+                                      .toInstant().toEpochMilli();
+                          } catch (Exception e) {
+                              continue;
+                          }
+                          if (title != null && !title.isEmpty() && link != null && !link.isEmpty()) {
+                              Article a = new Article();
+                              a.title = title;
+                              a.link = link;
+                              a.source = src;
+                              a.ts = ts;
+                              items.add(a);
+                          }
+                      }
+                  } catch (Exception e) {
+                      // XML kharab hai to khali list
+                  }
+                  return items;
+              }
+
+              static String googleNewsUrl(String query, List<String> excl) {
+                  StringBuilder minus = new StringBuilder();
+                  if (excl != null) for (String x : excl) minus.append(" -\"").append(x).append("\"");
+                  String q = enc(query + minus + " when:" + MAX_DAYS + "d");
+                  return "https://news.google.com/rss/search?q=" + q + "&hl=en-IN&gl=IN&ceid=IN:en";
+              }
+
+              static class Job {
+                  final String label, url;
+
+                  Job(String l, String u) {
+                      label = l;
+                      url = u;
+                  }
+              }
+
+              static List<Job> buildJobs(String name, String code, String alias, List<String> excl) {
+                  List<Job> jobs = new ArrayList<>();
+                  jobs.add(new Job("Google News", googleNewsUrl("\"" + name + "\" (" + code + ") share OR stock", excl)));
+                  jobs.add(new Job("Google News", googleNewsUrl("\"" + name + "\"", excl)));
+                  Set<String> seen = new HashSet<>();
+                  seen.add(name.toLowerCase());
+                  for (String a : alias.split(",")) {
+                      a = a.trim();
+                      if (!a.isEmpty() && seen.add(a.toLowerCase())) {
+                          jobs.add(new Job("Google News", googleNewsUrl("\"" + a + "\" share OR stock OR company", excl)));
+                      }
+                  }
+                  for (String[] s : SITES) {
+                      jobs.add(new Job(s[0], googleNewsUrl("\"" + name + "\" site:" + s[1], excl)));
+                  }
+                  String suffix = isDigits(code) ? ".BO" : ".NS";
+                  jobs.add(new Job("Yahoo Finance",
+                          "https://feeds.finance.yahoo.com/rss/2.0/headline?s=" + enc(code.toUpperCase() + suffix)
+                                  + "&region=IN&lang=en-IN"));
+                  return jobs;
+              }
+
+              // ---------------------------- RELEVANCE ----------------------------
+              static boolean isDigits(String s) {
+                  if (s == null || s.isEmpty()) return false;
+                  for (int i = 0; i < s.length(); i++) if (!Character.isDigit(s.charAt(i))) return false;
+                  return true;
+              }
+
+              static String norm(String s) {
+                  String x = s.toLowerCase().replaceAll("[^a-z0-9]+", " ").trim();
+                  return x.replaceAll("\\s+", " ");
+              }
+
+              static Set<String> buildTerms(String name, String code, String alias) {
+                  Set<String> terms = new HashSet<>();
+                  String[] words = norm(name).isEmpty() ? new String[0] : norm(name).split(" ");
+                  terms.add(String.join(" ", words));
+                  List<String> core = new ArrayList<>();
+                  for (String w : words) if (!CORP_WORDS.contains(w)) core.add(w);
+                  if (!core.isEmpty()) terms.add(String.join(" ", core));
+                  for (String a : alias.split(",")) {
+                      String n = norm(a);
+                      if (!n.isEmpty()) terms.add(n);
+                  }
+                  if (!isDigits(code) && code.length() >= 3) terms.add(norm(code));
+                  terms.remove("");
+                  return terms;
+              }
+
+              static boolean isRelevant(String title, Set<String> terms, String name, List<String> excl) {
+                  String t = title;
+                  int p = t.lastIndexOf(" - ");
+                  if (p >= 0) t = t.substring(0, p);              // " - Source" hata do
+                  String low = t.toLowerCase();
+                  for (String j : JUNK_PHRASES) if (low.contains(j)) return false;
+                  String nt = norm(t);
+                  String full = " " + norm(title) + " ";
+                  if (excl != null) {
+                      for (String x : excl) {
+                          String nx = norm(x);
+                          if (!nx.isEmpty() && full.contains(" " + nx + " ")) return false;
+                      }
+                  }
+                  if (nt.length() <= norm(name).length() + 4) return false;
+                  String padded = " " + nt + " ";
+                  for (String term : terms) if (padded.contains(" " + term + " ")) return true;
+                  return false;
+              }
+
+              // ---------------------------- REAL DATE ----------------------------
+              static final Map<String, Integer> MONTHS = new LinkedHashMap<>();
+
+              static {
+                  String[] m = {"jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"};
+                  for (int i = 0; i < m.length; i++) MONTHS.put(m[i], i + 1);
+              }
+
+              /** Google News ke redirect link se asli article ka link nikalta hai (best effort). */
+              static String resolveGoogleUrl(String link) {
+                  Matcher m = Pattern.compile("/articles/([^?/]+)").matcher(link);
+                  if (!m.find()) return null;
+                  String gid = m.group(1);
+                  // purana tarika: link base64 ke andar chhupa hota hai
+                  try {
+                      byte[] raw = Base64.getUrlDecoder().decode(gid);
+                      if (raw.length > 4 && (raw[0] & 0xff) == 0x08 && (raw[1] & 0xff) == 0x13 && (raw[2] & 0xff) == 0x22) {
+                          int ln = raw[3] & 0xff;
+                          int off = 4;
+                          if (ln >= 0x80) {
+                              ln = (ln & 0x7F) | ((raw[4] & 0xff) << 7);
+                              off = 5;
+                          }
+                          if (off + ln <= raw.length) {
+                              String url = new String(raw, off, ln, StandardCharsets.UTF_8);
+                              if (url.startsWith("http")) return url;
+                          }
+                      }
+                  } catch (Exception ignored) {
+                  }
+                  // naya tarika: Google ke batchexecute se
+                  try {
+                      String page = httpText("https://news.google.com/rss/articles/" + gid);
+                      Matcher sg = Pattern.compile("data-n-a-sg=\"([^\"]+)\"").matcher(page);
+                      Matcher ts = Pattern.compile("data-n-a-ts=\"([^\"]+)\"").matcher(page);
+                      if (!(sg.find() && ts.find())) return null;
+                      String inner = "[\"garturlreq\",[[\"X\",\"X\",[\"X\",\"X\"],null,null,1,1,\"US:en\",null,1,null,null,"
+                              + "null,null,null,0,1],\"X\",\"X\",1,[1,1,1],1,1,null,0,0,null,0],\""
+                              + gid + "\"," + ts.group(1) + ",\"" + sg.group(1) + "\"]";
+                      JSONArray req = new JSONArray().put(new JSONArray().put(new JSONArray()
+                              .put("Fbv4je").put(inner).put(JSONObject.NULL).put("generic")));
+                      String body = "f.req=" + enc(req.toString());
+                      String resp = new String(httpBytes("https://news.google.com/_/DotsSplashUi/data/batchexecute",
+                              body.getBytes(StandardCharsets.UTF_8),
+                              "application/x-www-form-urlencoded;charset=UTF-8", 10000, 400000), StandardCharsets.UTF_8);
+                      int cut = resp.indexOf("\n\n");
+                      if (cut < 0) return null;
+                      JSONArray parsed = new JSONArray(resp.substring(cut + 2).trim());
+                      String third = parsed.getJSONArray(0).getString(2);
+                      return new JSONArray(third).getString(1);
+                  } catch (Exception e) {
+                      return null;
+                  }
+              }
+
+              /** Text se date nikalta hai (ISO ya "12 Nov 2026"). Na mile to null. Return: epoch millis. */
+              static Long parseAnyDate(String txt) {
+                  txt = txt.trim();
+                  try {
+                      return OffsetDateTime.parse(txt).toInstant().toEpochMilli();
+                  } catch (Exception ignored) {
+                  }
+                  try {
+                      return OffsetDateTime.parse(txt, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ssZ"))
+                              .toInstant().toEpochMilli();
+                  } catch (Exception ignored) {
+                  }
+                  try {
+                      return OffsetDateTime.parse(txt, DateTimeFormatter.ofPattern("yyyy-MM-dd'T'HH:mm:ss.SSSZ"))
+                              .toInstant().toEpochMilli();
+                  } catch (Exception ignored) {
+                  }
+                  try {
+                      return LocalDateTime.parse(txt.replace(' ', 'T')).atZone(IST).toInstant().toEpochMilli();
+                  } catch (Exception ignored) {
+                  }
+                  try {
+                      return LocalDate.parse(txt).atStartOfDay(IST).toInstant().toEpochMilli();
+                  } catch (Exception ignored) {
+                  }
+                  Matcher m = Pattern.compile("(\\d{1,2})\\s+([A-Za-z]{3})[a-z]*,?\\s+(20\\d\\d)").matcher(txt);
+                  if (m.find()) {
+                      Integer mon = MONTHS.get(m.group(2).toLowerCase());
+                      if (mon != null) {
+                          try {
+                              return LocalDate.of(Integer.parseInt(m.group(3)), mon, Integer.parseInt(m.group(1)))
+                                      .atStartOfDay(IST).toInstant().toEpochMilli();
+                          } catch (Exception ignored) {
+                          }
+                      }
+                  }
+                  return null;
+              }
+
+              static final Pattern[] DATE_PATS = {
+                      Pattern.compile("property=[\"']article:published_time[\"'][^>]*content=[\"']([^\"']+)", Pattern.CASE_INSENSITIVE),
+                      Pattern.compile("content=[\"']([^\"']+)[\"'][^>]*property=[\"']article:published_time", Pattern.CASE_INSENSITIVE),
+                      Pattern.compile("\"datePublished\"\\s*:\\s*\"([^\"]+)", Pattern.CASE_INSENSITIVE),
+                      Pattern.compile("itemprop=[\"']datePublished[\"'][^>]*content=[\"']([^\"']+)", Pattern.CASE_INSENSITIVE),
+                      Pattern.compile("name=[\"'](?:date|publish[-_]?date|pubdate)[\"'][^>]*content=[\"']([^\"']+)", Pattern.CASE_INSENSITIVE),
+                      Pattern.compile("Published on\\s+([0-9]{1,2}\\s+[A-Za-z]{3,9}\\s+20\\d\\d)", Pattern.CASE_INSENSITIVE)
+              };
+
+              /** Article page khol kar asli chhapne ki tareekh nikalta hai. Na mile to null. */
+              static Long realPublishDate(String link) {
+                  try {
+                      String url = link.contains("news.google.com") ? resolveGoogleUrl(link) : link;
+                      if (url == null) return null;
+                      String page = httpText(url);
+                      for (Pattern p : DATE_PATS) {
+                          Matcher m = p.matcher(page);
+                          if (m.find()) {
+                              Long d = parseAnyDate(m.group(1));
+                              if (d != null) return d;
+                          }
+                      }
+                  } catch (Exception ignored) {
+                  }
+                  return null;
+              }
+
+              static List<Article> dropStale(List<Article> news, Progress pg) {
+                  long cutoff = System.currentTimeMillis() - MAX_DAYS * 86400000L;
+                  List<Long> dates = parallel(news, 10, a -> realPublishDate(a.link));
+                  List<Article> kept = new ArrayList<>();
+                  for (int i = 0; i < news.size(); i++) {
+                      Article n = news.get(i);
+                      Long d = dates.get(i);
+                      if (d != null) {
+                          if (d < cutoff) continue;       // purani khabar hata di
+                          n.ts = Math.min(n.ts, d);
+                      }
+                      kept.add(n);
+                  }
+                  return kept;
+              }
+
+              // ---------------------------- PARALLEL HELPER ----------------------------
+              interface Fn<A, B> {
+                  B apply(A a) throws Exception;
+              }
+
+              static <A, B> List<B> parallel(List<A> in, int threads, final Fn<A, B> fn) {
+                  ExecutorService ex = Executors.newFixedThreadPool(Math.max(1, threads));
+                  List<Future<B>> fs = new ArrayList<>();
+                  try {
+                      for (final A a : in) {
+                          fs.add(ex.submit(new Callable<B>() {
+                              @Override
+                              public B call() {
+                                  try {
+                                      return fn.apply(a);
+                                  } catch (Exception e) {
+                                      return null;
+                                  }
+                              }
+                          }));
+                      }
+                      List<B> out = new ArrayList<>();
+                      for (Future<B> f : fs) {
+                          try {
+                              out.add(f.get());
+                          } catch (Exception e) {
+                              out.add(null);
+                          }
+                      }
+                      return out;
+                  } finally {
+                      ex.shutdown();
+                  }
+              }
+
+              // ---------------------------- MAIN NEWS FETCH ----------------------------
+              public static List<Article> getCompanyNews(Company c, Progress pg) {
+                  Set<String> terms = buildTerms(c.name, c.code, c.alias);
+                  List<List<Article>> results = parallel(buildJobs(c.name, c.code, c.alias, c.excl), 8, job -> {
+                      try {
+                          return parseRss(fetch(job.url), job.label);
+                      } catch (Exception e) {
+                          return new ArrayList<Article>();
+                      }
+                  });
+                  long cutoff = System.currentTimeMillis() - MAX_DAYS * 86400000L;
+                  Set<String> seen = new HashSet<>();
+                  List<Article> news = new ArrayList<>();
+                  for (List<Article> lst : results) {
+                      if (lst == null) continue;
+                      for (Article n : lst) {
+                          if (n.ts < cutoff) continue;
+                          if (!isRelevant(n.title, terms, c.name, c.excl)) continue;
+                          String key = n.title.toLowerCase();
+                          if (key.length() > 80) key = key.substring(0, 80);
+                          if (!seen.add(key)) continue;
+                          news.add(n);
+                      }
+                  }
+                  Collections.sort(news, (a, b) -> Long.compare(b.ts, a.ts));
+                  if (news.size() > MAX_PER_COMPANY) news = new ArrayList<>(news.subList(0, MAX_PER_COMPANY));
+                  if (pg != null) pg.say(c.name + ": " + news.size() + " khabrein mili, date check ho rahi hai...");
+                  news = dropStale(news, pg);
+                  Collections.sort(news, (a, b) -> Long.compare(b.ts, a.ts));
+                  return news;
+              }
+
+              // ---------------------------- COMPANY VERIFY ----------------------------
+              static List<Match> yahooSearch(String q) {
+                  List<Match> out = new ArrayList<>();
+                  try {
+                      String url = "https://query2.finance.yahoo.com/v1/finance/search?q=" + enc(q)
+                              + "&quotesCount=10&newsCount=0&region=IN&lang=en-IN";
+                      JSONObject data = new JSONObject(new String(fetch(url), StandardCharsets.UTF_8));
+                      JSONArray quotes = data.optJSONArray("quotes");
+                      if (quotes == null) return out;
+                      for (int i = 0; i < quotes.length(); i++) {
+                          JSONObject it = quotes.getJSONObject(i);
+                          String sym = it.optString("symbol", "");
+                          if (!"EQUITY".equals(it.optString("quoteType")) || !(sym.endsWith(".NS") || sym.endsWith(".BO")))
+                              continue;
+                          String longName = it.optString("longname", "").trim();
+                          String shortName = it.optString("shortname", "").trim();
+                          Match m = new Match();
+                          m.name = !longName.isEmpty() ? longName : (!shortName.isEmpty() ? shortName : sym);
+                          m.shortName = shortName;
+                          String s = sym.substring(0, sym.length() - 3);
+                          if (sym.endsWith(".NS")) m.nse = s;
+                          else m.bse = s;
+                          out.add(m);
+                      }
+                  } catch (Exception ignored) {
+                  }
+                  return out;
+              }
+
+              static List<String> googleSuggest(String q) {
+                  List<String> cleaned = new ArrayList<>();
+                  try {
+                      String url = "https://suggestqueries.google.com/complete/search?client=firefox&q="
+                              + enc(q + " share price");
+                      JSONArray data = new JSONArray(new String(fetch(url), StandardCharsets.UTF_8));
+                      JSONArray sugg = data.getJSONArray(1);
+                      for (int i = 0; i < sugg.length(); i++) {
+                          String x = sugg.getString(i).replaceAll(
+                                  "(?i)\\b(share price|stock price|share|stock|price|news|target|nse|bse)\\b", "");
+                          x = x.trim().replaceAll("\\s+", " ");
+                          boolean dup = false;
+                          for (String c : cleaned) if (c.equalsIgnoreCase(x)) dup = true;
+                          if (!x.isEmpty() && !dup) cleaned.add(x);
+                      }
+                  } catch (Exception ignored) {
+                  }
+                  return cleaned.size() > 3 ? cleaned.subList(0, 3) : cleaned;
+              }
+
+              /** Naam se NSE+BSE companies dhoondta hai (galat spelling par suggestion bhi try karta hai). */
+              public static List<Match> findCompanies(String query) {
+                  List<Match> results = yahooSearch(query);
+                  if (results.isEmpty()) {
+                      for (String s : googleSuggest(query)) results.addAll(yahooSearch(s));
+                  }
+                  if (results.isEmpty()) {
+                      String[] parts = query.trim().split("\\s+");
+                      String first = parts.length > 0 ? parts[0] : "";
+                      if (first.length() >= 3 && !first.equals(query)) results = yahooSearch(first);
+                  }
+                  Map<String, Match> grouped = new LinkedHashMap<>();   // ek company = NSE + BSE ek saath
+                  for (Match r : results) {
+                      Match g = grouped.get(norm(r.name));
+                      if (g == null) {
+                          g = new Match();
+                          g.name = r.name;
+                          g.shortName = r.shortName;
+                          grouped.put(norm(r.name), g);
+                      }
+                      if (g.nse == null && r.nse != null) g.nse = r.nse;
+                      if (g.bse == null && r.bse != null) g.bse = r.bse;
+                  }
+                  return new ArrayList<>(grouped.values());
+              }
+
+              static JSONObject yahooChartMeta(String sym) {
+                  try {
+                      String url = "https://query1.finance.yahoo.com/v8/finance/chart/" + enc(sym)
+                              + "?range=1d&interval=1d";
+                      JSONObject data = new JSONObject(new String(fetch(url), StandardCharsets.UTF_8));
+                      JSONObject meta = data.getJSONObject("chart").getJSONArray("result").getJSONObject(0)
+                              .getJSONObject("meta");
+                      if (!"EQUITY".equals(meta.optString("instrumentType", "EQUITY"))) return null;
+                      return meta;
+                  } catch (Exception e) {
+                      return null;
+                  }
+              }
+
+              /** NSE code ya BSE code (6 ank) se asli (official) company pata karta hai. */
+              public static Match lookupByCode(String code) {
+                  String c = code.trim().toUpperCase();
+                  String[] syms = isDigits(c) ? new String[]{c + ".BO"} : new String[]{c + ".NS", c + ".BO"};
+                  Match g = null;
+                  for (String sym : syms) {
+                      JSONObject meta = yahooChartMeta(sym);
+                      if (meta == null) continue;
+                      String name = meta.optString("longName", "").trim();
+                      if (name.isEmpty()) name = meta.optString("shortName", "").trim();
+                      if (name.isEmpty()) continue;
+                      boolean nse = sym.endsWith(".NS");
+                      if (g == null) {
+                          g = new Match();
+                          g.name = name;
+                          g.shortName = meta.optString("shortName", "").trim();
+                      }
+                      if (norm(name).equals(norm(g.name))) {
+                          if (nse) g.nse = c;
+                          else g.bse = c;
+                      }
+                  }
+                  if (g == null) {                                   // chart na chale to search se try
+                      Match first = null;
+                      for (Match r : yahooSearch(c)) {
+                          String s = r.bestCode();
+                          if (s != null && s.equalsIgnoreCase(c)) {
+                              if (first == null) {
+                                  first = r;
+                                  g = new Match();
+                                  g.name = r.name;
+                                  g.shortName = r.shortName;
+                              }
+                              if (norm(r.name).equals(norm(first.name))) {
+                                  if (r.nse != null && g.nse == null) g.nse = r.nse;
+                                  if (r.bse != null && g.bse == null) g.bse = r.bse;
+                              }
+                          }
+                      }
+                  }
+                  return g;
+              }
+
+              public static List<String> splitNames(String text) {
+                  List<String> out = new ArrayList<>();
+                  for (String x : text.split("[;,]")) {
+                      x = x.trim();
+                      if (!x.isEmpty()) out.add(x);
+                  }
+                  return out;
+              }
+
+              // ---------------------------- HTML ----------------------------
+              static String esc(String s) {
+                  return s.replace("&", "&amp;").replace("<", "&lt;").replace(">", "&gt;")
+                          .replace("\"", "&quot;").replace("'", "&#39;");
+              }
+
+              static String ago(long ts) {
+                  long s = (System.currentTimeMillis() - ts) / 1000;
+                  if (s < 3600) return Math.max(1, s / 60) + " min pehle";
+                  if (s < 86400) return (s / 3600) + " ghante pehle";
+                  return (s / 86400) + " din pehle";
+              }
+
+              static final String CSS =
+                      "*{box-sizing:border-box}\n"
+                              + "body{margin:0;font-family:Roboto,Arial,sans-serif;background:#0f172a;color:#e2e8f0}\n"
+                              + "header{background:linear-gradient(135deg,#1e3a8a,#0ea5e9);padding:22px 14px;text-align:center;box-shadow:0 4px 20px #0006}\n"
+                              + "header h1{margin:0;font-size:1.4rem;letter-spacing:1px}\n"
+                              + "header p{margin:8px 0 0;opacity:.9;font-size:.85rem}\n"
+                              + "nav{position:sticky;top:0;z-index:5;background:#111c33;padding:10px;display:flex;gap:8px;flex-wrap:wrap;justify-content:center;border-bottom:1px solid #1f2d4d}\n"
+                              + "nav a{color:#e2e8f0;text-decoration:none;background:#1e293b;padding:6px 12px;border-radius:20px;font-size:.85rem}\n"
+                              + "nav a span{color:#38bdf8;font-size:.72rem;margin-left:4px}\n"
+                              + "main{max-width:1200px;margin:0 auto;padding:12px}\n"
+                              + "section{margin:24px 0}\n"
+                              + "h2{border-left:5px solid #38bdf8;padding-left:12px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:1.15rem}\n"
+                              + "h2 .code{background:#38bdf8;color:#0f172a;font-size:.75rem;padding:3px 10px;border-radius:12px}\n"
+                              + "h2 em{font-size:.75rem;color:#94a3b8;font-weight:400;margin-left:auto}\n"
+                              + ".grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(280px,1fr));gap:12px}\n"
+                              + ".card{display:block;background:#1e293b;border-radius:12px;padding:14px;text-decoration:none;color:inherit;border:1px solid #273449}\n"
+                              + ".t{font-weight:600;line-height:1.4;margin-bottom:10px}\n"
+                              + ".m{display:flex;justify-content:space-between;gap:8px;font-size:.74rem;color:#94a3b8}\n"
+                              + ".m b{color:#38bdf8} .m i{font-style:normal}\n"
+                              + ".none{color:#94a3b8}\n"
+                              + "footer{text-align:center;color:#64748b;padding:20px;font-size:.75rem}\n";
+
+              public static String buildHtml(List<CompanyNews> companies) {
+                  DateTimeFormatter full = DateTimeFormatter.ofPattern("dd MMM yyyy, hh:mm a", Locale.ENGLISH);
+                  DateTimeFormatter shortF = DateTimeFormatter.ofPattern("dd MMM, hh:mm a", Locale.ENGLISH);
+                  String now = ZonedDateTime.now(IST).format(full) + " IST";
+                  StringBuilder nav = new StringBuilder(), sections = new StringBuilder();
+                  int total = 0;
+                  for (int i = 0; i < companies.size(); i++) {
+                      CompanyNews cn = companies.get(i);
+                      Company c = cn.company;
+                      total += cn.news.size();
+                      nav.append("<a href=\"#c").append(i).append("\">").append(esc(c.name))
+                              .append(" <span>").append(esc(c.code.toUpperCase())).append("</span></a>");
+                      StringBuilder cards = new StringBuilder();
+                      if (!cn.news.isEmpty()) {
+                          for (Article n : cn.news) {
+                              String when = Instant.ofEpochMilli(n.ts).atZone(IST).format(shortF);
+                              cards.append("<a class=\"card\" href=\"").append(esc(n.link)).append("\">")
+                                      .append("<div class=\"t\">").append(esc(n.title)).append("</div>")
+                                      .append("<div class=\"m\"><b>").append(esc(n.source)).append("</b>")
+                                      .append("<i>").append(when).append(" &middot; ").append(ago(n.ts)).append("</i></div></a>");
+                          }
+                      } else {
+                          cards.append("<p class=\"none\">Pichhle ").append(MAX_DAYS)
+                                  .append(" din me is company ki koi seedhi khabar nahi mili.</p>");
+                      }
+                      sections.append("<section id=\"c").append(i).append("\"><h2>").append(esc(c.name))
+                              .append(" <span class=\"code\">").append(esc(c.code.toUpperCase())).append("</span>")
+                              .append("<em>").append(cn.news.size()).append(" khabrein</em></h2><div class=\"grid\">")
+                              .append(cards).append("</div></section>");
+                  }
+                  return "<!DOCTYPE html>\n<html lang=\"hi\"><head><meta charset=\"utf-8\">\n"
+                          + "<meta name=\"viewport\" content=\"width=device-width,initial-scale=1\">\n"
+                          + "<title>Latest Stock News</title>\n<style>\n" + CSS + "</style></head><body>\n"
+                          + "<header><h1>&#128200; LATEST INDIAN STOCK NEWS</h1>\n"
+                          + "<p>" + companies.size() + " companies &middot; " + total + " khabrein &middot; Updated: " + now + "</p></header>\n"
+                          + "<nav>" + nav + "</nav>\n<main>" + sections + "</main>\n"
+                          + "<footer>Source: Google News, Moneycontrol, Economic Times, Business Standard, Mint, Yahoo Finance etc. "
+                          + "&middot; Sirf jaankari ke liye, investment salah nahi.</footer>\n</body></html>";
+              }
+          }
+          LNEOF9
+          mkdir -p app/src/main/java/com/dkj/latestnews
+          cat > app/src/main/java/com/dkj/latestnews/MainActivity.java <<'LNEOF10'
+          package com.dkj.latestnews;
+
+          import android.app.Activity;
+          import android.Manifest;
+          import android.app.AlertDialog;
+          import android.content.ContentValues;
+          import android.content.pm.PackageManager;
+          import android.os.Build;
+          import android.os.Environment;
+          import android.provider.MediaStore;
+          import android.content.DialogInterface;
+          import android.content.Intent;
+          import android.graphics.Color;
+          import android.graphics.drawable.GradientDrawable;
+          import android.net.Uri;
+          import android.os.Bundle;
+          import android.text.InputType;
+          import android.view.Gravity;
+          import android.view.View;
+          import android.view.ViewGroup;
+          import android.webkit.WebResourceRequest;
+          import android.webkit.WebSettings;
+          import android.webkit.WebView;
+          import android.webkit.WebViewClient;
+          import android.widget.Button;
+          import android.widget.EditText;
+          import android.widget.FrameLayout;
+          import android.widget.LinearLayout;
+          import android.widget.ProgressBar;
+          import android.widget.ScrollView;
+          import android.widget.TextView;
+          import android.widget.Toast;
+
+          import java.io.File;
+          import java.io.FileOutputStream;
+          import java.io.OutputStream;
+          import java.nio.charset.StandardCharsets;
+          import java.text.SimpleDateFormat;
+          import java.util.ArrayList;
+          import java.util.Date;
+          import java.util.Locale;
+          import java.util.List;
+          import java.util.concurrent.ExecutorService;
+          import java.util.concurrent.Executors;
+
+          /**
+           * LATEST INDIAN STOCK NEWS - Android app.
+           * Python program ka mobile (Java) version.
+           *
+           * Flow: company naam + code -> Yahoo se verify -> list me jodo ->
+           *       "Get Latest News" -> sabki khabrein ek sundar HTML page me (WebView).
+           */
+          public class MainActivity extends Activity {
+
+              private static final String BG = "#0f172a";
+              private static final String CARD = "#1e293b";
+              private static final String LINE = "#273449";
+              private static final String TXT = "#e2e8f0";
+              private static final String MUTED = "#94a3b8";
+              private static final String ACCENT = "#0ea5e9";
+              private static final String FAKE_BASE = "https://latestnews.local/";
+
+              private final List<NewsEngine.Company> companies = new ArrayList<>();
+              private final ExecutorService bg = Executors.newCachedThreadPool();
+
+              private EditText etName, etCode, etShort, etExcl;
+              private LinearLayout listBox;
+              private TextView tvCount;
+              private ScrollView formView;
+              private WebView web;
+              private Button saveBtn;
+              private String lastHtml = null;
+              private static final int REQ_STORAGE = 77;
+              private AlertDialog busy;
+              private TextView busyText;
+
+              // ------------------------------------------------------------------ UI build
+              @Override
+              protected void onCreate(Bundle savedInstanceState) {
+                  super.onCreate(savedInstanceState);
+                  getWindow().setStatusBarColor(Color.parseColor(BG));
+                  getWindow().setNavigationBarColor(Color.parseColor(BG));
+
+                  FrameLayout root = new FrameLayout(this);
+                  root.setBackgroundColor(Color.parseColor(BG));
+
+                  formView = new ScrollView(this);
+                  formView.setFillViewport(true);
+                  LinearLayout form = new LinearLayout(this);
+                  form.setOrientation(LinearLayout.VERTICAL);
+                  form.setPadding(dp(16), dp(16), dp(16), dp(24));
+                  formView.addView(form, new ViewGroup.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT));
+
+                  TextView title = new TextView(this);
+                  title.setText("\uD83D\uDCC8 LATEST INDIAN STOCK NEWS");
+                  title.setTextColor(Color.WHITE);
+                  title.setTextSize(20);
+                  title.setGravity(Gravity.CENTER);
+                  title.setPadding(dp(8), dp(18), dp(8), dp(6));
+                  title.setBackground(rounded("#1e3a8a", 14, null));
+                  form.addView(title, lp(0));
+
+                  TextView sub = new TextView(this);
+                  sub.setText("Company jodo, phir pichhle " + NewsEngine.MAX_DAYS + " din ki khabar ek saath dekho");
+                  sub.setTextColor(Color.parseColor(MUTED));
+                  sub.setTextSize(13);
+                  sub.setGravity(Gravity.CENTER);
+                  sub.setPadding(0, dp(8), 0, dp(12));
+                  form.addView(sub, lp(0));
+
+                  etName = field("1) Company name (e.g. Larsen & Toubro)");
+                  etCode = field("2) NSE code ya BSE code (e.g. LT ya 500510)");
+                  etCode.setInputType(InputType.TYPE_CLASS_TEXT | InputType.TYPE_TEXT_FLAG_CAP_CHARACTERS
+                          | InputType.TYPE_TEXT_FLAG_NO_SUGGESTIONS);
+                  etShort = field("3) Short name(s) - optional (L&T; LT)");
+                  etExcl = field("4) EXCLUDE words - optional (F&M; bank; golf)");
+                  form.addView(etName, lp(8));
+                  form.addView(etCode, lp(8));
+                  form.addView(etShort, lp(8));
+                  form.addView(etExcl, lp(8));
+
+                  Button add = button("\u2795  Verify & Add Company", "#16a34a");
+                  add.setOnClickListener(v -> onAddClicked());
+                  form.addView(add, lp(12));
+
+                  tvCount = new TextView(this);
+                  tvCount.setTextColor(Color.parseColor(ACCENT));
+                  tvCount.setTextSize(15);
+                  tvCount.setPadding(dp(4), dp(18), 0, dp(4));
+                  form.addView(tvCount, lp(0));
+
+                  listBox = new LinearLayout(this);
+                  listBox.setOrientation(LinearLayout.VERTICAL);
+                  form.addView(listBox, lp(0));
+
+                  Button go = button("\uD83D\uDCF0  Get Latest News", ACCENT);
+                  go.setOnClickListener(v -> onGetNews());
+                  form.addView(go, lp(16));
+
+                  TextView note = new TextView(this);
+                  note.setText("Sirf jaankari ke liye, investment salah nahi.");
+                  note.setTextColor(Color.parseColor("#64748b"));
+                  note.setTextSize(12);
+                  note.setGravity(Gravity.CENTER);
+                  note.setPadding(0, dp(16), 0, 0);
+                  form.addView(note, lp(0));
+
+                  web = new WebView(this);
+                  web.setBackgroundColor(Color.parseColor(BG));
+                  WebSettings ws = web.getSettings();
+                  ws.setJavaScriptEnabled(true);
+                  ws.setDomStorageEnabled(false);
+                  web.setWebViewClient(new WebViewClient() {
+                      @Override
+                      public boolean shouldOverrideUrlLoading(WebView view, WebResourceRequest request) {
+                          String url = request.getUrl().toString();
+                          if (url.startsWith(FAKE_BASE)) {                 // company chips (#c0, #c1 ...)
+                              String frag = request.getUrl().getFragment();
+                              if (frag != null && frag.matches("c[0-9]+")) {
+                                  view.evaluateJavascript("var e=document.getElementById('" + frag
+                                          + "');if(e){window.scrollTo(0,e.offsetTop-60);}", null);
+                              }
+                              return true;
+                          }
+                          try {                                            // asli khabar: browser me kholo
+                              startActivity(new Intent(Intent.ACTION_VIEW, Uri.parse(url)));
+                          } catch (Exception e) {
+                              Toast.makeText(MainActivity.this, "Link nahi khul paya", Toast.LENGTH_SHORT).show();
+                          }
+                          return true;
+                      }
+                  });
+                  web.setVisibility(View.GONE);
+
+                  root.addView(formView, new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+                  root.addView(web, new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.MATCH_PARENT));
+
+                  saveBtn = button("\uD83D\uDCBE  Save", "#16a34a");
+                  saveBtn.setOnClickListener(v -> onSaveClicked());
+                  saveBtn.setVisibility(View.GONE);
+                  FrameLayout.LayoutParams sp = new FrameLayout.LayoutParams(
+                          ViewGroup.LayoutParams.WRAP_CONTENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                  sp.gravity = Gravity.BOTTOM | Gravity.END;
+                  sp.setMargins(0, 0, dp(16), dp(24));
+                  root.addView(saveBtn, sp);
+
+                  setContentView(root);
+                  refreshList();
+              }
+
+              private int dp(int v) {
+                  return (int) (v * getResources().getDisplayMetrics().density + 0.5f);
+              }
+
+              private LinearLayout.LayoutParams lp(int topDp) {
+                  LinearLayout.LayoutParams p = new LinearLayout.LayoutParams(
+                          ViewGroup.LayoutParams.MATCH_PARENT, ViewGroup.LayoutParams.WRAP_CONTENT);
+                  p.topMargin = dp(topDp);
+                  return p;
+              }
+
+              private GradientDrawable rounded(String fill, int radiusDp, String stroke) {
+                  GradientDrawable d = new GradientDrawable();
+                  d.setColor(Color.parseColor(fill));
+                  d.setCornerRadius(dp(radiusDp));
+                  if (stroke != null) d.setStroke(dp(1), Color.parseColor(stroke));
+                  return d;
+              }
+
+              private EditText field(String hint) {
+                  EditText e = new EditText(this);
+                  e.setHint(hint);
+                  e.setHintTextColor(Color.parseColor(MUTED));
+                  e.setTextColor(Color.parseColor(TXT));
+                  e.setTextSize(15);
+                  e.setSingleLine(true);
+                  e.setPadding(dp(14), dp(12), dp(14), dp(12));
+                  e.setBackground(rounded(CARD, 10, LINE));
+                  return e;
+              }
+
+              private Button button(String text, String color) {
+                  Button b = new Button(this);
+                  b.setText(text);
+                  b.setAllCaps(false);
+                  b.setTextColor(Color.WHITE);
+                  b.setTextSize(16);
+                  b.setBackground(rounded(color, 12, null));
+                  b.setPadding(dp(12), dp(14), dp(12), dp(14));
+                  return b;
+              }
+
+              // ------------------------------------------------------------------ company list
+              private void refreshList() {
+                  listBox.removeAllViews();
+                  tvCount.setText(companies.isEmpty()
+                          ? "Abhi koi company nahi jodi gayi"
+                          : "Jodi gayi companies: " + companies.size() + "  (hatane ke liye \u2715 dabao)");
+                  for (int i = 0; i < companies.size(); i++) {
+                      final int idx = i;
+                      NewsEngine.Company c = companies.get(i);
+                      LinearLayout row = new LinearLayout(this);
+                      row.setOrientation(LinearLayout.HORIZONTAL);
+                      row.setGravity(Gravity.CENTER_VERTICAL);
+                      row.setPadding(dp(12), dp(10), dp(6), dp(10));
+                      row.setBackground(rounded(CARD, 10, LINE));
+
+                      TextView t = new TextView(this);
+                      String extra = c.excl.isEmpty() ? "" : "\nExclude: " + String.join(", ", c.excl);
+                      t.setText(c.name + "  [" + c.code.toUpperCase() + "]" + extra);
+                      t.setTextColor(Color.parseColor(TXT));
+                      t.setTextSize(14);
+                      row.addView(t, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+
+                      TextView x = new TextView(this);
+                      x.setText("\u2715");
+                      x.setTextColor(Color.parseColor("#f87171"));
+                      x.setTextSize(20);
+                      x.setPadding(dp(14), dp(6), dp(14), dp(6));
+                      x.setOnClickListener(v -> {
+                          companies.remove(idx);
+                          refreshList();
+                      });
+                      row.addView(x);
+                      listBox.addView(row, lp(8));
+                  }
+              }
+
+              // ------------------------------------------------------------------ busy dialog
+              private void showBusy(String msg) {
+                  hideBusy();
+                  LinearLayout box = new LinearLayout(this);
+                  box.setOrientation(LinearLayout.HORIZONTAL);
+                  box.setGravity(Gravity.CENTER_VERTICAL);
+                  box.setPadding(dp(20), dp(20), dp(20), dp(20));
+                  box.addView(new ProgressBar(this));
+                  busyText = new TextView(this);
+                  busyText.setText(msg);
+                  busyText.setTextSize(15);
+                  busyText.setPadding(dp(16), 0, 0, 0);
+                  box.addView(busyText, new LinearLayout.LayoutParams(0, ViewGroup.LayoutParams.WRAP_CONTENT, 1f));
+                  busy = new AlertDialog.Builder(this).setView(box).setCancelable(false).create();
+                  busy.show();
+              }
+
+              private void setBusyText(final String msg) {
+                  runOnUiThread(() -> {
+                      if (busyText != null) busyText.setText(msg);
+                  });
+              }
+
+              private void hideBusy() {
+                  if (busy != null) {
+                      try {
+                          busy.dismiss();
+                      } catch (Exception ignored) {
+                      }
+                      busy = null;
+                  }
+              }
+
+              // ------------------------------------------------------------------ add company flow
+              private void onAddClicked() {
+                  final String name = etName.getText().toString().trim();
+                  final String code = etCode.getText().toString().trim().toUpperCase();
+                  final List<String> shorts = NewsEngine.splitNames(etShort.getText().toString());
+                  final List<String> excl = NewsEngine.splitNames(etExcl.getText().toString());
+                  if (name.isEmpty() || code.isEmpty()) {
+                      toast("Company name aur NSE/BSE code dono zaroori hain.");
+                      return;
+                  }
+                  if (!code.matches("[A-Z0-9&\\-]{1,20}")) {
+                      toast("Code galat lag raha hai. Sirf letters/digits, jaise LT ya 500510.");
+                      return;
+                  }
+                  showBusy("Yahoo Finance / Google se verify ho raha hai...");
+                  bg.execute(() -> {
+                      final NewsEngine.Match g = NewsEngine.lookupByCode(code);
+                      runOnUiThread(() -> {
+                          hideBusy();
+                          if (isFinishing()) return;
+                          if (g != null) {
+                              confirmByCode(name, code, shorts, excl, g);
+                          } else {
+                              toast("Code '" + code + "' NSE/BSE par nahi mila.");
+                              searchByName(name, code, shorts, excl);
+                          }
+                      });
+                  });
+              }
+
+              private void confirmByCode(final String name, final String code, final List<String> shorts,
+                                         final List<String> excl, final NewsEngine.Match g) {
+                  new AlertDialog.Builder(this)
+                          .setTitle("Kya ye sahi company hai?")
+                          .setMessage("Aapne likha: " + name + " (" + code + ")\n\nOfficial: " + g.name
+                                  + "\n[" + g.codes() + "]")
+                          .setCancelable(false)
+                          .setPositiveButton("Haan (Y)", (d, w) -> {
+                              List<String> al = new ArrayList<>();
+                              if (!g.shortName.isEmpty()) al.add(g.shortName);
+                              al.addAll(shorts);
+                              addCompany(g.name, code, String.join(",", al), excl);
+                          })
+                          .setNegativeButton("Nahi (N)", (d, w) -> searchByName(name, code, shorts, excl))
+                          .show();
+              }
+
+              private void searchByName(final String name, final String code, final List<String> shorts,
+                                        final List<String> excl) {
+                  showBusy("Naam se company dhoondh raha hoon...");
+                  bg.execute(() -> {
+                      final List<NewsEngine.Match> found = new ArrayList<>();
+                      final List<String> seen = new ArrayList<>();
+                      List<String> queries = new ArrayList<>();
+                      queries.add(name);
+                      queries.addAll(shorts);
+                      for (String q : queries) {
+                          for (NewsEngine.Match m : NewsEngine.findCompanies(q)) {
+                              String key = m.name.toLowerCase();
+                              if (!seen.contains(key)) {
+                                  seen.add(key);
+                                  found.add(m);
+                              }
+                          }
+                      }
+                      // jis match me typed code ho use upar rakho
+                      List<NewsEngine.Match> sorted = new ArrayList<>();
+                      for (NewsEngine.Match m : found) {
+                          if (code.equals(m.nse) || code.equals(m.bse)) sorted.add(m);
+                      }
+                      for (NewsEngine.Match m : found) if (!sorted.contains(m)) sorted.add(m);
+                      runOnUiThread(() -> {
+                          hideBusy();
+                          if (isFinishing()) return;
+                          showMatches(name, code, shorts, excl, sorted);
+                      });
+                  });
+              }
+
+              private void showMatches(final String name, final String code, final List<String> shorts,
+                                       final List<String> excl, final List<NewsEngine.Match> found) {
+                  if (found.isEmpty()) {
+                      new AlertDialog.Builder(this)
+                              .setTitle("Koi match nahi mila")
+                              .setMessage("'" + name + "' ke liye koi company nahi mili.\n\n"
+                                      + "Dobara likhna hai (Retype) ya jo likha hai wahi rakhna hai (Keep)?")
+                              .setPositiveButton("Keep as typed",
+                                      (d, w) -> addCompany(name, code, String.join(",", shorts), excl))
+                              .setNegativeButton("Retype", null)
+                              .show();
+                      return;
+                  }
+                  final String[] items = new String[found.size()];
+                  for (int i = 0; i < items.length; i++) {
+                      items[i] = found.get(i).name + "\n[" + found.get(i).codes() + "]";
+                  }
+                  new AlertDialog.Builder(this)
+                          .setTitle("Possible matches for '" + name + "'")
+                          .setItems(items, (d, which) -> {
+                              NewsEngine.Match f = found.get(which);
+                              List<String> al = new ArrayList<>();
+                              if (!f.shortName.isEmpty()) al.add(f.shortName);
+                              al.addAll(shorts);
+                              addCompany(f.name, f.bestCode(), String.join(",", al), excl);
+                          })
+                          .setPositiveButton("Keep as typed",
+                                  (d, w) -> addCompany(name, code, String.join(",", shorts), excl))
+                          .setNegativeButton("Retype", null)
+                          .show();
+              }
+
+              private void addCompany(String name, String code, String alias, List<String> excl) {
+                  NewsEngine.Company c = new NewsEngine.Company();
+                  c.name = name;
+                  c.code = code;
+                  c.alias = alias;
+                  c.excl = new ArrayList<>(excl);
+                  companies.add(c);
+                  etName.setText("");
+                  etCode.setText("");
+                  etShort.setText("");
+                  etExcl.setText("");
+                  refreshList();
+                  toast("Saved: " + name + " (" + code.toUpperCase() + ")");
+              }
+
+              // ------------------------------------------------------------------ fetch news
+              private void onGetNews() {
+                  if (companies.isEmpty()) {
+                      toast("Pehle kam se kam ek company jodo.");
+                      return;
+                  }
+                  final List<NewsEngine.Company> snapshot = new ArrayList<>(companies);
+                  showBusy("Khabar khoj raha hoon...");
+                  bg.execute(() -> {
+                      List<NewsEngine.CompanyNews> result = new ArrayList<>();
+                      int n = snapshot.size();
+                      for (int i = 0; i < n; i++) {
+                          NewsEngine.Company c = snapshot.get(i);
+                          setBusyText("(" + (i + 1) + "/" + n + ") Khabar khoj raha hoon:\n" + c.name
+                                  + " (" + c.code.toUpperCase() + ")");
+                          NewsEngine.CompanyNews cn = new NewsEngine.CompanyNews();
+                          cn.company = c;
+                          try {
+                              cn.news = NewsEngine.getCompanyNews(c, this::setBusyText);
+                          } catch (Exception e) {
+                              cn.news = new ArrayList<>();
+                          }
+                          result.add(cn);
+                      }
+                      final String html = NewsEngine.buildHtml(result);
+                      runOnUiThread(() -> {
+                          hideBusy();
+                          if (isFinishing()) return;
+                          lastHtml = html;
+                          web.loadDataWithBaseURL(FAKE_BASE, html, "text/html", "utf-8", null);
+                          formView.setVisibility(View.GONE);
+                          web.setVisibility(View.VISIBLE);
+                          saveBtn.setVisibility(View.VISIBLE);
+                      });
+                  });
+              }
+
+              // ------------------------------------------------------------------ save HTML to Downloads
+              private void onSaveClicked() {
+                  if (lastHtml == null) {
+                      toast("Save karne ke liye abhi koi news nahi hai.");
+                      return;
+                  }
+                  if (Build.VERSION.SDK_INT < Build.VERSION_CODES.Q
+                          && checkSelfPermission(Manifest.permission.WRITE_EXTERNAL_STORAGE)
+                          != PackageManager.PERMISSION_GRANTED) {
+                      requestPermissions(new String[]{Manifest.permission.WRITE_EXTERNAL_STORAGE}, REQ_STORAGE);
+                      return;
+                  }
+                  saveHtmlToDownloads();
+              }
+
+              @Override
+              public void onRequestPermissionsResult(int requestCode, String[] permissions, int[] grantResults) {
+                  super.onRequestPermissionsResult(requestCode, permissions, grantResults);
+                  if (requestCode == REQ_STORAGE) {
+                      if (grantResults.length > 0 && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
+                          saveHtmlToDownloads();
+                      } else {
+                          toast("Storage permission nahi mili, isliye save nahi ho paya.");
+                      }
+                  }
+              }
+
+              private void saveHtmlToDownloads() {
+                  final String fileName = "LATEST_NEWS_"
+                          + new SimpleDateFormat("yyyyMMdd_HHmm", Locale.ENGLISH).format(new Date()) + ".html";
+                  final byte[] data = lastHtml.getBytes(StandardCharsets.UTF_8);
+                  try {
+                      if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                          ContentValues cv = new ContentValues();
+                          cv.put(MediaStore.Downloads.DISPLAY_NAME, fileName);
+                          cv.put(MediaStore.Downloads.MIME_TYPE, "text/html");
+                          cv.put(MediaStore.Downloads.RELATIVE_PATH, Environment.DIRECTORY_DOWNLOADS);
+                          Uri uri = getContentResolver().insert(MediaStore.Downloads.EXTERNAL_CONTENT_URI, cv);
+                          if (uri == null) throw new Exception("file nahi ban payi");
+                          try (OutputStream os = getContentResolver().openOutputStream(uri)) {
+                              os.write(data);
+                          }
+                      } else {
+                          File dir = Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_DOWNLOADS);
+                          if (!dir.exists()) dir.mkdirs();
+                          try (FileOutputStream os = new FileOutputStream(new File(dir, fileName))) {
+                              os.write(data);
+                          }
+                      }
+                      toast("Save ho gaya: Download/" + fileName);
+                  } catch (Exception e) {
+                      toast("Save nahi ho paya: " + e.getMessage());
+                  }
+              }
+
+              // ------------------------------------------------------------------ misc
+              private void toast(String s) {
+                  Toast.makeText(this, s, Toast.LENGTH_LONG).show();
+              }
+
+              @Override
+              public void onBackPressed() {
+                  if (web.getVisibility() == View.VISIBLE) {          // news page se wapas form par
+                      web.setVisibility(View.GONE);
+                      saveBtn.setVisibility(View.GONE);
+                      formView.setVisibility(View.VISIBLE);
+                  } else {
+                      super.onBackPressed();
+                  }
+              }
+
+              @Override
+              protected void onDestroy() {
+                  hideBusy();
+                  bg.shutdownNow();
+                  super.onDestroy();
+              }
+          }
+          LNEOF10
+          base64 -d > app/release.jks <<'LNKEY'
+          MIIKXAIBAzCCCgYGCSqGSIb3DQEHAaCCCfcEggnzMIIJ7zCCBbYGCSqGSIb3DQEHAaCCBacEggWj
+          MIIFnzCCBZsGCyqGSIb3DQEMCgECoIIFQDCCBTwwZgYJKoZIhvcNAQUNMFkwOAYJKoZIhvcNAQUM
+          MCsEFCMAsmXcm4uWoeGBGiHa749EgLrSAgInEAIBIDAMBggqhkiG9w0CCQUAMB0GCWCGSAFlAwQB
+          KgQQZgK8qLwaj9/sxQygC/p79QSCBND93AyKVwIjoscC1cwtTE8Wk9P/CK9e6RnheGH6J86IN0AH
+          Iu3Lfwm4drGTq8y+6UyC5VUCCA4M0VFXOkaVFh6vNVJCu8NcSIjlwE5vUyrJ9E1TZtFywq7q2slf
+          YhinzBLp42s6REtRBwhZqKGU5jYHvZgobVShoSxX7ToO3n/1DbTDWKyCSh0VZNdaBAWRzYFjDmZ2
+          Bs54bhwbJ/uiiYt32qY/w+K3kyHB/38O/Xu2CzmvttQY32Dfh7WJYOxn10svk7QhSmk6/TUep7yt
+          3UPo/ma8tfcZHF+pfXrQyqny7hUMiZP8ks4bWgHULn1rBe43k3L9MifN8nlM9IlkVnTPrG1PEnYz
+          odq+WGV0drWCLmyLHiox5ecUJW0w1iIVMzwPrJ6vamq0nkxcPue8o/fIJWSReZ0KZVP2l2mqM3l2
+          yqafW4JJiMtalYm4OWQAL/Aj3dvGfmr4BZSKIuqX56T6o+C0FGd22DaQ82CsWgzHJMhgciKCqOMh
+          0miBjOwxBURL6npay1ggW+M9qHzZpCeyfDpUUOsmbldxn8QkWZo+yDpE3FjerGKjuGRiLQiRV7g9
+          7a9Qdjk2oDBsRQewCySdAUtXCTKy0YoWC2IEGnTEw2nVU1bLwo2uJOua5v1IP3IcWrelsfM+6N0z
+          HKSRcwKSSGG0NnnNWXwm65av6O8PU3rnP0COl0xAixxaqmVHcUz3w+iREZgwaKpkEpaEenQOgvEY
+          pSEhXkFSqeNciBI3+FjBGFXYXyLNVQOu6pRjjnjK2iNfrVe4nilL2MKlMcsAHBZodQFoSZnanBIr
+          yR7kgA+fbYYJE2vbU8NanMYCM3dJmZV0ITccUHLoPsGQOUBIJDjL/VlmWYksswedqvm63BkJkplg
+          qSv4HREE5g7dLL4zinMNpaeDRxnmxyRumkRG6fllo5TQGElSGl2lDkpTqnE6wvV1PdNH0/vRY3rG
+          xZm+UvbsqInDDAZCHkZd9wAIAe1yBXXGTUbAW2UX9tm+Kvv2xWRDp2H2mwVdAPnIopqKu+XxBZJP
+          CwCebEp3wZ8h2DRE5EoxoTSvOXCGXCDA5i7Hwbb/uZdI00zkJlR0u+5UpNKNz/j7lT0PaSaZRBAr
+          r+Xt1K+dAu0fixCagyTeeN32Mf9dXW0S48Vq69m7D09nb7GvNtPFXd14Eo68G7uRps1QxwrTSNuS
+          KBgk2UtjDnmNxOaAXw0iU+A1dL9z9CzdC/7kUesftpD0QADPKVjyjK/eaZu/R0QQ5aMdnLpbuWkB
+          NpenEfdy2JZF0R4pslvtSOszQmbLbPC0LNIzfojTFDw3E4VD1ZCOdMiLK7F/eKZyaUcte9AakmfK
+          KyXzsV9ULngAuyKtJgDripxsOWXGRKeHyAI7F0YS8wojEk/uUkNKunEWo+CDd06dKc7bLNrKDXyK
+          2Qd3zSsvjcsBf4rWc09V9hI9fHSY/cGhFk8xa/o26+6pGCw9g2nDOF1YbvI090MFEgJIXSkednYM
+          Hx7GP3jGXCo7UGfxYzj26oz/kVpbM5U9zoB4kUm6U+s7cTm2T9qutpoImqXdEQtsZeL2k8iyRFwD
+          HIbV98puy4WC2GE5SyBHKuzgYrDf/GDWN4r3U1IrNCMmV9W55O/XzDpWVPIMWrq0guWGkMW5MNxq
+          /DFIMCMGCSqGSIb3DQEJFDEWHhQAbABhAHQAZQBzAHQAbgBlAHcAczAhBgkqhkiG9w0BCRUxFAQS
+          VGltZSAxNzk0NTYwMDUxMjM5MIIEMQYJKoZIhvcNAQcGoIIEIjCCBB4CAQAwggQXBgkqhkiG9w0B
+          BwEwZgYJKoZIhvcNAQUNMFkwOAYJKoZIhvcNAQUMMCsEFPkqsfca2ZMUI43ki4JHTexwbSHSAgIn
+          EAIBIDAMBggqhkiG9w0CCQUAMB0GCWCGSAFlAwQBKgQQZpC0hAtfV3cfXu7nf7XfSICCA6CkYMml
+          Q2dSrlD/MBHAD2WcW7lVAWnKv9XhU2qfyhUVu2h/88GPjHxwczHrPKh8RyU53nDs5sViYYbLL2I6
+          4ClDgnJ5aKlDlquZbo/4Cuq+b9S2AqkSGdSnyBYzlStPqlenDjhgu81Fc7ZJj1ZDP8YwvDItnFjd
+          akmThoRl4lK4K7+HMspkEDQ+KUjjhB9ZNikxij8Vbbe/0gXRI5uCIql1sN02VhZJch4KQ23xyPh7
+          u1esI/ch59beVeRP2inAK3JvM14zncwU9x4LxkZO7YiOld25eL08SDou+3bHHMEcRtY1lgIz6Mrm
+          gTwCv6e+HEmTG4xw+ivyVNVWRc3Vun7xLjTL7GGihKCvF0biDYpNZTIqAHZ/ukDCkb2DDyygVPRK
+          h+Y84+jLHyYL53xXEQPK6QQO+Bzte09JwEKt/KuXTUWMgyowRSyvwhzogTdGn4WMjVZwStn8vBGi
+          gkt+vHfFHL3zU0IuCKF609k6ZxeyD3H5LshMWHI2S2GsKLZnHabMjDN1YH0p030EQcVbKRdr6c0r
+          R+pIqiH+TSTHJ+9XMs1f4Ttdh1XI+cppj1SjRjHXA625pxjsqUv4jysWuoyKW++UgkvutqmxqOjj
+          Z0NZJ+pt+7PhubViI3hywYJD7WyxaDnlWVsZBAGlM3EFM+rw7obu/EEhWpmgFj9hH8h0BJ3YfYbY
+          GL/1VPOhGrF0i9Ovl2hmJUxdJVlUb+WL6jRdnSaAGl2dNjahYq2FHbGmjgb5RJCxplivbvDG5l+P
+          Of6mB1uPmZZZIiU/xEb1e4Lg1ShAG9N1FC2NkhtSyDhxIDvmSw9H0V8RHHUiyvFph3aMBSwVw9ne
+          vD3P/A0SE9XulPm1R4LrUSIrLPIpFPwkd3izYvefCuRwyrJgAlv6P+od4JWcCgyif2zCpErNbmcj
+          w3SDEOMd7c8jE1b9yJVsuiBbaeKDzrTBYnYHt8EwwMG5XAlVKHsdmPQZn+C5S5oQZQt7okJRGKmX
+          Pwxqgwr1cSvyByxzwznUEaPMNUQQCw7BUMwdz90Tiqv/OTYP4qS8LwhLkdSPixCpPTHpEXoHgNJE
+          ZntRk2Sg6jZFu1lqUAdv4h/uE7hPa2JTlCM/BkuzqB82aaSk+aiBfdig0F3ioQloBwLDO71lZwjl
+          b1sTcq5dytL/I8gAfPQOi/N5tdK1YlHKeVb7Qc+mCgZCM3TopU/8yK51sgjL02Zy9TmwMf9HWtBj
+          Ju4x5uGz/7UieafTME0wMTANBglghkgBZQMEAgEFAAQgNQA+bNiKH0vUkcQpG224FuD7uzjDi+8j
+          85iRSf92fccEFP3gcgbDPHmP/VpQgqZ+DSdnTfELAgInEA==
+          LNKEY
+
+      - name: Release APK build (signed)
+        working-directory: proj
+        run: gradle assembleRelease --stacktrace
+
+      - name: APK upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: LatestStockNews-APK
+          path: proj/app/build/outputs/apk/release/*.apk
+          if-no-files-found: error
